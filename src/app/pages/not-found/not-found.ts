@@ -5,7 +5,7 @@ import { RouterLink } from '@angular/router';
   selector: 'app-not-found',
   imports: [RouterLink],
   template: `
-    <section class="space-y-4">
+    <main class="mx-auto min-h-[70vh] max-w-4xl space-y-4 px-4 py-8">
       <h1 class="text-3xl font-bold text-slate-900">404 - Pagina no encontrada</h1>
       <p class="text-slate-700">La ruta que has intentado visitar no existe.</p>
       <a
@@ -14,7 +14,7 @@ import { RouterLink } from '@angular/router';
       >
         Volver al inicio
       </a>
-    </section>
+    </main>
   `,
 })
 export class NotFoundComponent {}
