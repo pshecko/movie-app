@@ -1,59 +1,84 @@
-# MovieApp
+# Movie App
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.0.4.
+Angular coursework project for a small movie catalog. The app follows the
+requirements in `briefing.md`: routed pages, a shared layout, dynamic movie
+details, 404 handling, and CRUD operations through `HttpClient`.
 
-## Development server
+## Stack
 
-To start a local development server, run:
+- Angular 22
+- Standalone components and lazy-loaded routes
+- Signals for local component state
+- Tailwind CSS 4
+- `json-server` for the local movie API
+- Vitest through the Angular unit-test builder
 
-```bash
-ng serve
-```
+## Setup
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+Install dependencies:
 
 ```bash
-ng generate --help
+npm ci
 ```
 
-## Building
-
-To build the project run:
+Run the local API in one terminal:
 
 ```bash
-ng build
+npm run api
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
+Run Angular in another terminal:
 
 ```bash
-ng test
+npm start
 ```
 
-## Running end-to-end tests
+Open `http://localhost:4200`.
 
-For end-to-end (e2e) testing, run:
+## Routes
+
+- `/` - home page
+- `/home` - redirects to `/`
+- `/movies` - movie list and add form
+- `/movies/:movieId` - movie details, edit, and delete actions
+- any unknown route - 404 page
+
+## Local API
+
+The app reads and writes movies at:
+
+```text
+http://localhost:3000/movies
+```
+
+Seed data lives in `db.json`. Keep `npm run api` running while testing list,
+details, add, edit, and delete flows in the browser.
+
+## Useful Commands
+
+Run unit and accessibility checks:
 
 ```bash
-ng e2e
+npm test
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+Create a production build:
 
-## Additional Resources
+```bash
+npm run build
+```
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+The production output is written under:
+
+```text
+dist/movie-app/browser
+```
+
+## Deployment Note
+
+The GitHub Pages workflow starts `json-server` during the build job so API
+dependent checks have local data available in CI.
+
+GitHub Pages is still a static host. It can serve the Angular build, but it
+does not keep `json-server` running after deployment. Browser CRUD calls on the
+deployed site still need a real hosted API if full runtime CRUD is required.
