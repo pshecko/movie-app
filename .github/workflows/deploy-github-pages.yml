@@ -27,7 +27,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: 24
+          node-version: 24.18.0
           cache: npm
 
       - name: Install dependencies
@@ -43,7 +43,7 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
         with:
-          path: dist/image-gallery/browser
+          path: dist/movie-app/browser
 
   deploy:
     name: Deploy
