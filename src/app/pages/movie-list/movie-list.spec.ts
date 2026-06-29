@@ -94,4 +94,89 @@ describe('MovieListComponent', () => {
 
     expect(fixture.nativeElement.textContent).toContain('Mar adentro');
   });
+
+  it('shows a helpful empty state when no movies are returned', () => {
+    const fixture = TestBed.createComponent(MovieListComponent);
+    fixture.detectChanges();
+    http.expectOne('http://localhost:3000/movies').flush([]);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Todavia no hay peliculas.');
+  });
+
+  it('prevents duplicate add requests while one is pending', () => {
+    const fixture = TestBed.createComponent(MovieListComponent);
+    fixture.detectChanges();
+    http.expectOne('http://localhost:3000/movies').flush(mockMovies);
+    fixture.detectChanges();
+
+    const [titleInput, directorInput, genreInput] = Array.from(
+      fixture.nativeElement.querySelectorAll('input'),
+    ) as HTMLInputElement[];
+    titleInput.value = 'Mar adentro';
+    titleInput.dispatchEvent(new Event('input'));
+    directorInput.value = 'Alejandro Amenabar';
+    directorInput.dispatchEvent(new Event('input'));
+    genreInput.value = 'Drama';
+    genreInput.dispatchEvent(new Event('input'));
+
+    const form = fixture.nativeElement.querySelector('form') as HTMLFormElement;
+    form.dispatchEvent(new Event('submit'));
+    form.dispatchEvent(new Event('submit'));
+    fixture.detectChanges();
+
+    const requests = http.match('http://localhost:3000/movies');
+
+    expect(requests).toHaveLength(1);
+    expect((fixture.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement).disabled).toBe(
+      true,
+    );
+    requests.forEach((req) =>
+      req.flush({
+        id: '4',
+        title: 'Mar adentro',
+        director: 'Alejandro Amenabar',
+        genre: 'Drama',
+      }),
+    );
+  });
+
+  it('shows add errors and clears them after a successful retry', () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const fixture = TestBed.createComponent(MovieListComponent);
+    fixture.detectChanges();
+    http.expectOne('http://localhost:3000/movies').flush(mockMovies);
+    fixture.detectChanges();
+
+    const [titleInput, directorInput, genreInput] = Array.from(
+      fixture.nativeElement.querySelectorAll('input'),
+    ) as HTMLInputElement[];
+    titleInput.value = 'Mar adentro';
+    titleInput.dispatchEvent(new Event('input'));
+    directorInput.value = 'Alejandro Amenabar';
+    directorInput.dispatchEvent(new Event('input'));
+    genreInput.value = 'Drama';
+    genreInput.dispatchEvent(new Event('input'));
+
+    const form = fixture.nativeElement.querySelector('form') as HTMLFormElement;
+    form.dispatchEvent(new Event('submit'));
+    http
+      .expectOne('http://localhost:3000/movies')
+      .flush('Server error', { status: 500, statusText: 'Server Error' });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Codigo de error del servidor: 500');
+
+    form.dispatchEvent(new Event('submit'));
+    http.expectOne('http://localhost:3000/movies').flush({
+      id: '4',
+      title: 'Mar adentro',
+      director: 'Alejandro Amenabar',
+      genre: 'Drama',
+    });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).not.toContain('Codigo de error del servidor: 500');
+    consoleSpy.mockRestore();
+  });
 });

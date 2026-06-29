@@ -96,4 +96,78 @@ describe('MovieDetailsComponent', () => {
 
     expect(fixture.nativeElement.textContent).toContain('Fantasia oscura');
   });
+
+  it('validates the edit form before saving', () => {
+    const fixture = TestBed.createComponent(MovieDetailsComponent);
+    fixture.componentRef.setInput('movieId', '1');
+    fixture.detectChanges();
+    http.expectOne('http://localhost:3000/movies/1').flush(selectedMovie);
+    fixture.detectChanges();
+
+    fixture.nativeElement.querySelector('[data-testid="edit-movie"]').click();
+    fixture.detectChanges();
+
+    const titleInput = fixture.nativeElement.querySelector('#edit-title') as HTMLInputElement;
+    titleInput.value = '   ';
+    titleInput.dispatchEvent(new Event('input'));
+    fixture.nativeElement.querySelector('form').dispatchEvent(new Event('submit'));
+    fixture.detectChanges();
+
+    expect(http.match('http://localhost:3000/movies/1')).toHaveLength(0);
+    expect(fixture.nativeElement.textContent).toContain('Completa todos los campos.');
+  });
+
+  it('shows an update error and keeps the edit form open', () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const fixture = TestBed.createComponent(MovieDetailsComponent);
+    fixture.componentRef.setInput('movieId', '1');
+    fixture.detectChanges();
+    http.expectOne('http://localhost:3000/movies/1').flush(selectedMovie);
+    fixture.detectChanges();
+
+    fixture.nativeElement.querySelector('[data-testid="edit-movie"]').click();
+    fixture.detectChanges();
+    fixture.nativeElement.querySelector('form').dispatchEvent(new Event('submit'));
+    fixture.detectChanges();
+
+    const saveButton = fixture.nativeElement.querySelector('form button[type="submit"]') as HTMLButtonElement;
+    expect(saveButton.disabled).toBe(true);
+
+    http
+      .expectOne('http://localhost:3000/movies/1')
+      .flush('Server error', { status: 500, statusText: 'Server Error' });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Codigo de error del servidor: 500');
+    expect(fixture.nativeElement.querySelector('form')).toBeTruthy();
+    expect(saveButton.disabled).toBe(false);
+    consoleSpy.mockRestore();
+  });
+
+  it('shows a delete error without navigating away', () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const fixture = TestBed.createComponent(MovieDetailsComponent);
+    const router = TestBed.inject(Router);
+    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    fixture.componentRef.setInput('movieId', '1');
+    fixture.detectChanges();
+    http.expectOne('http://localhost:3000/movies/1').flush(selectedMovie);
+    fixture.detectChanges();
+
+    const deleteButton = fixture.nativeElement.querySelector('[data-testid="delete-movie"]') as HTMLButtonElement;
+    deleteButton.click();
+    fixture.detectChanges();
+
+    expect(deleteButton.disabled).toBe(true);
+
+    http
+      .expectOne('http://localhost:3000/movies/1')
+      .flush('Server error', { status: 500, statusText: 'Server Error' });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Codigo de error del servidor: 500');
+    expect(navigateSpy).not.toHaveBeenCalled();
+    expect(deleteButton.disabled).toBe(false);
+    consoleSpy.mockRestore();
+  });
 });
