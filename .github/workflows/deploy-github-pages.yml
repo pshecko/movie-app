@@ -33,6 +33,25 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Start movie API
+        run: |
+          npm run api -- --host 127.0.0.1 > /tmp/json-server.log 2>&1 &
+          echo "JSON_SERVER_PID=$!" >> "$GITHUB_ENV"
+
+      - name: Wait for movie API
+        run: |
+          for attempt in {1..20}; do
+            if curl --silent --fail http://127.0.0.1:3000/movies > /tmp/movies.json; then
+              cat /tmp/movies.json
+              exit 0
+            fi
+
+            sleep 1
+          done
+
+          cat /tmp/json-server.log
+          exit 1
+
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v6
@@ -44,6 +63,13 @@ jobs:
         uses: actions/upload-pages-artifact@v5
         with:
           path: dist/movie-app/browser
+
+      - name: Stop movie API
+        if: always()
+        run: |
+          if [ -n "${JSON_SERVER_PID:-}" ]; then
+            kill "$JSON_SERVER_PID" || true
+          fi
 
   deploy:
     name: Deploy
