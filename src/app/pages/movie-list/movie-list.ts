@@ -53,17 +53,24 @@ import { MovieService } from '../../services/movie.service';
 
         <button
           class="w-fit rounded bg-slate-900 px-4 py-2 text-white hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500"
+          [disabled]="adding()"
           type="submit"
         >
-          Añadir nueva pelicula
+          {{ adding() ? 'Añadiendo...' : 'Añadir nueva pelicula' }}
         </button>
       </form>
 
-      @if (loading()) {
-        <p class="text-slate-700">Cargando peliculas...</p>
-      } @else if (error()) {
+      @if (error()) {
         <p class="rounded border border-red-300 bg-red-50 p-3 text-red-800" role="alert">
           {{ error() }}
+        </p>
+      }
+
+      @if (loading()) {
+        <p class="text-slate-700">Cargando peliculas...</p>
+      } @else if (movies().length === 0) {
+        <p class="rounded border border-slate-200 p-4 text-slate-700">
+          Todavia no hay peliculas.
         </p>
       } @else {
         <ul class="grid gap-3 sm:grid-cols-2">
@@ -91,10 +98,14 @@ export class MovieListComponent implements OnInit {
   protected readonly newTitle = signal('');
   protected readonly newDirector = signal('');
   protected readonly newGenre = signal('');
+  protected readonly adding = signal(false);
 
   ngOnInit(): void {
     this.movieService.getMovies().subscribe({
-      next: () => this.loading.set(false),
+      next: () => {
+        this.error.set('');
+        this.loading.set(false);
+      },
       error: (error: Error) => {
         this.error.set(error.message);
         this.loading.set(false);
@@ -104,6 +115,10 @@ export class MovieListComponent implements OnInit {
 
   protected addMovie(event: Event): void {
     event.preventDefault();
+
+    if (this.adding()) {
+      return;
+    }
 
     const movie: NewMovie = {
       title: this.newTitle().trim(),
@@ -116,13 +131,21 @@ export class MovieListComponent implements OnInit {
       return;
     }
 
+    this.error.set('');
+    this.adding.set(true);
+
     this.movieService.addMovie(movie).subscribe({
       next: () => {
         this.newTitle.set('');
         this.newDirector.set('');
         this.newGenre.set('');
+        this.error.set('');
+        this.adding.set(false);
       },
-      error: (error: Error) => this.error.set(error.message),
+      error: (error: Error) => {
+        this.error.set(error.message);
+        this.adding.set(false);
+      },
     });
   }
 

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, input, output, signal } from '@angular/core';
+import { Component, OnInit, inject, input, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Movie } from '../../models/movie';
 import { MovieService } from '../../services/movie.service';
@@ -26,6 +26,7 @@ import { MovieService } from '../../services/movie.service';
           <button
             class="rounded border border-slate-300 px-4 py-2 text-slate-900 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-500"
             data-testid="edit-movie"
+            [disabled]="saving() || deleting()"
             type="button"
             (click)="startEdit(selectedMovie)"
           >
@@ -34,12 +35,19 @@ import { MovieService } from '../../services/movie.service';
           <button
             class="rounded bg-red-700 px-4 py-2 text-white hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500"
             data-testid="delete-movie"
+            [disabled]="deleting()"
             type="button"
             (click)="removeMovie(selectedMovie.id)"
           >
-            Eliminar
+            {{ deleting() ? 'Eliminando...' : 'Eliminar' }}
           </button>
         </div>
+
+        @if (error()) {
+          <p class="rounded border border-red-300 bg-red-50 p-3 text-red-800" role="alert">
+            {{ error() }}
+          </p>
+        }
 
         @if (editing()) {
           <form class="grid gap-3 rounded border border-slate-200 p-4" (submit)="saveMovie($event)">
@@ -86,9 +94,10 @@ import { MovieService } from '../../services/movie.service';
 
             <button
               class="w-fit rounded bg-slate-900 px-4 py-2 text-white hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500"
+              [disabled]="saving()"
               type="submit"
             >
-              Guardar cambios
+              {{ saving() ? 'Guardando...' : 'Guardar cambios' }}
             </button>
           </form>
         }
@@ -109,7 +118,6 @@ import { MovieService } from '../../services/movie.service';
 })
 export class MovieDetailsComponent implements OnInit {
   readonly movieId = input.required<string>();
-  readonly deleteMovie = output<string>();
 
   private readonly movieService = inject(MovieService);
   private readonly router = inject(Router);
@@ -120,11 +128,15 @@ export class MovieDetailsComponent implements OnInit {
   protected readonly editTitle = signal('');
   protected readonly editDirector = signal('');
   protected readonly editGenre = signal('');
+  protected readonly error = signal('');
+  protected readonly saving = signal(false);
+  protected readonly deleting = signal(false);
 
   ngOnInit(): void {
     this.movieService.getMovieById(this.movieId()).subscribe({
       next: (movie) => {
         this.movie.set(movie);
+        this.error.set('');
         this.loading.set(false);
       },
       error: () => this.loading.set(false),
@@ -136,6 +148,7 @@ export class MovieDetailsComponent implements OnInit {
   }
 
   protected startEdit(movie: Movie): void {
+    this.error.set('');
     this.editTitle.set(movie.title);
     this.editDirector.set(movie.director);
     this.editGenre.set(movie.genre);
@@ -150,6 +163,10 @@ export class MovieDetailsComponent implements OnInit {
       return;
     }
 
+    if (this.saving()) {
+      return;
+    }
+
     const updatedMovie: Movie = {
       id: currentMovie.id,
       title: this.editTitle().trim(),
@@ -157,18 +174,41 @@ export class MovieDetailsComponent implements OnInit {
       genre: this.editGenre().trim(),
     };
 
+    if (!updatedMovie.title || !updatedMovie.director || !updatedMovie.genre) {
+      this.error.set('Completa todos los campos.');
+      return;
+    }
+
+    this.error.set('');
+    this.saving.set(true);
+
     this.movieService.updateMovie(updatedMovie).subscribe({
       next: (movie) => {
         this.movie.set(movie);
         this.editing.set(false);
+        this.saving.set(false);
+      },
+      error: (error: Error) => {
+        this.error.set(error.message);
+        this.saving.set(false);
       },
     });
   }
 
   protected removeMovie(id: string): void {
-    this.deleteMovie.emit(id);
+    if (this.deleting()) {
+      return;
+    }
+
+    this.error.set('');
+    this.deleting.set(true);
+
     this.movieService.deleteMovie(id).subscribe({
       next: () => this.backToList(),
+      error: (error: Error) => {
+        this.error.set(error.message);
+        this.deleting.set(false);
+      },
     });
   }
 
