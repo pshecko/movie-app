@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { Movie } from '../../models/movie';
 import { MovieService } from '../../services/movie.service';
+import { expectNoAxeViolations } from '../../testing/axe';
 import { MovieDetailsComponent } from './movie-details';
 
 describe('MovieDetailsComponent', () => {
@@ -169,5 +170,16 @@ describe('MovieDetailsComponent', () => {
     expect(navigateSpy).not.toHaveBeenCalled();
     expect(deleteButton.disabled).toBe(false);
     consoleSpy.mockRestore();
+  });
+
+  it('passes accessibility checks for the movie detail view', async () => {
+    const fixture = TestBed.createComponent(MovieDetailsComponent);
+    fixture.componentRef.setInput('movieId', '1');
+    fixture.detectChanges();
+    http.expectOne('http://localhost:3000/movies/1').flush(selectedMovie);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    await expectNoAxeViolations(fixture.nativeElement);
   });
 });

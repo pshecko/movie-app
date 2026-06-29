@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Movie } from '../../models/movie';
 import { MovieService } from '../../services/movie.service';
+import { expectNoAxeViolations } from '../../testing/axe';
 import { MovieListComponent } from './movie-list';
 
 describe('MovieListComponent', () => {
@@ -178,5 +179,15 @@ describe('MovieListComponent', () => {
 
     expect(fixture.nativeElement.textContent).not.toContain('Codigo de error del servidor: 500');
     consoleSpy.mockRestore();
+  });
+
+  it('passes accessibility checks for the loaded movie list', async () => {
+    const fixture = TestBed.createComponent(MovieListComponent);
+    fixture.detectChanges();
+    http.expectOne('http://localhost:3000/movies').flush(mockMovies);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    await expectNoAxeViolations(fixture.nativeElement);
   });
 });
